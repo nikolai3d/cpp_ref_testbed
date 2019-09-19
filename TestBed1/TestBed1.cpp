@@ -87,16 +87,21 @@ TestHolder & generate_payload_ref() {
 }
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::cout << "MAIN SCOPE BEGINS\n";
 
     // Create + Move + Destroy
+    std::cout << "\nTestHolder c; test case >>>>> \n";
     TestHolder c = generate_holder();
     c.printout();
 
     // Same as previous
+    std::cout << "\nconst TestHolder &d; test case >>>>> \n";
     const TestHolder &d = generate_holder();
     d.printout();
 
+    std::cout << "\nTestHolder&& e; test case >>>>> \n";
+    TestHolder&& e = generate_holder();
+    e.printout();
     // Does not compile
     //TestHolder& m = generate_count_sequence();
     // m.printout();
@@ -104,5 +109,5 @@ int main()
     // Generates compiler warning + Undefined behaviour(Access violation, crash, or nothing) at runtime.
     // TestHolder& mm = generate_count_sequence_bad();
     // mm.printout();
-    std::cout << "The End!\n";
+    std::cout << "\nMAIN SCOPE ENDS\n\n";
 }
