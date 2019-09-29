@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <future>
 
 class TestHolder {
 public:
@@ -85,29 +86,95 @@ TestHolder & generate_payload_ref() {
   TestHolder r(s_generate_counter++);
   return r;
 }
+
+void main_test_return_types() {
+  std::cout << "MAIN SCOPE BEGINS\n";
+
+  // Create + Move + Destroy
+  std::cout << "\nTestHolder c; test case >>>>> \n";
+  TestHolder c = generate_holder();
+  c.printout();
+
+  // Same as previous
+  std::cout << "\nconst TestHolder &d; test case >>>>> \n";
+  const TestHolder& d = generate_holder();
+  d.printout();
+
+  std::cout << "\nTestHolder&& e; test case >>>>> \n";
+  TestHolder&& e = generate_holder();
+  e.printout();
+  // Does not compile
+  //TestHolder& m = generate_count_sequence();
+  // m.printout();
+
+  // Generates compiler warning + Undefined behaviour(Access violation, crash, or nothing) at runtime.
+  // TestHolder& mm = generate_count_sequence_bad();
+  // mm.printout();
+  std::cout << "\nMAIN SCOPE ENDS\n\n";
+}
+
+std::future<void> launch_consumer_thread() {
+  using namespace std::chrono_literals;
+  std::shared_ptr<TestHolder> input_payload = std::make_shared<TestHolder>(42);
+
+
+
+/*  std::future<void> consumer_thread_future = std::async([=] {
+      std::cout << "THREAD: Printing and consuming payload: ";
+      input_payload->printout();
+      std::cout << "THREAD ENDS\n";
+    });
+*/
+
+   /*std::future<void> propert_consumer_thread_future = std::async([payload = std::move(input_payload)]() mutable {
+    std::cout << "THREAD: Printing and consuming payload: ";
+    payload->printout();
+    payload = nullptr;
+    std::cout << "THREAD ENDS\n";
+    }); */
+  
+
+   std::future<void> propert_consumer_thread_future = std::async([=]() mutable {
+    std::cout << "THREAD: Printing and consuming payload: ";
+    input_payload->printout();
+    input_payload = nullptr; //Confusing, since captured object is basically different from source, we're just reducing refcount here.
+    std::cout << "THREAD ENDS\n";
+  });
+  
+
+   // Objects inside lambda capture, by default, survive till the lambda is destroyed. 
+   // For the async argument, it means it survives till the corresponding future's call of "get()";
+   // To destroy those explicitly, in a consumer pattern, use move semantics, and null out the object inside the lambda when it's no longer needed
+
+
+  std::cout << "LAUNCHER: WAITING A BIT...\n";
+  std::this_thread::sleep_for(1000ms);
+  std::cout << "LAUNCHER: END\n";
+
+  return propert_consumer_thread_future;
+}
+
+void main_test_async_lifetime() {
+  using namespace std::chrono_literals;
+  std::future<void> consumer_thread = launch_consumer_thread();
+  std::cout << "MAIN: WAITING...\n";
+  std::this_thread::sleep_for(2000ms);
+  std::cout << "MAIN: WAITING SOME MORE...\n";
+  std::this_thread::sleep_for(1000ms);
+
+  std::cout << "MAIN: WAITING ON FUTURE...\n";
+  (void) consumer_thread.get();
+
+  std::cout << "MAIN: WAITING EVEN MORE...\n";
+  std::this_thread::sleep_for(1000ms);
+  std::cout << "MAIN: END\n";
+
+}
+
+
 int main()
 {
-    std::cout << "MAIN SCOPE BEGINS\n";
-
-    // Create + Move + Destroy
-    std::cout << "\nTestHolder c; test case >>>>> \n";
-    TestHolder c = generate_holder();
-    c.printout();
-
-    // Same as previous
-    std::cout << "\nconst TestHolder &d; test case >>>>> \n";
-    const TestHolder &d = generate_holder();
-    d.printout();
-
-    std::cout << "\nTestHolder&& e; test case >>>>> \n";
-    TestHolder&& e = generate_holder();
-    e.printout();
-    // Does not compile
-    //TestHolder& m = generate_count_sequence();
-    // m.printout();
-
-    // Generates compiler warning + Undefined behaviour(Access violation, crash, or nothing) at runtime.
-    // TestHolder& mm = generate_count_sequence_bad();
-    // mm.printout();
-    std::cout << "\nMAIN SCOPE ENDS\n\n";
+  main_test_async_lifetime();
 }
+
+
